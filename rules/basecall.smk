@@ -46,3 +46,19 @@ rule find_dupleces:
             --threads {params.threads}
         """
 
+
+rule duplex_basecall:
+    input:
+        pod5s = os.path.join(OUTDIR, "{sample}/pod5/{pore}/{run}"),
+        duplex_data = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}")
+        pair_ids = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}/split_duplex_pair_ids.txt")
+    output:
+        directory(os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}"))
+    params:
+        threads = 4
+    message:
+        "Rule {rule} started processing {input.duplex_data}."
+    log:
+        os.path.join(LOGDIR, "dorado_basecall_{sample}_{pore}_{run}.log")
+    shell:
+        "bash scripts/run_dorado_basecaller.sh -i {input} -o {output} --pore {wildcards.pore}"

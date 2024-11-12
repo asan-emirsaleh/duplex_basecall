@@ -1,7 +1,7 @@
 import os
 import click
 import rich.console as console
-import subproess
+import subprocess
 
 
 ## Pseudocode block
@@ -53,9 +53,26 @@ from enum import Enum
 
 console = Console()
 
-class PoreType(str, Enum):
-    R10_4 = "r10.4"
-    R9_4_1 = "9.4.1"
+model_map = {
+    "R9.4.1": "dna_r9.4.1_450bps_sup.cfg",
+    "R10.0": "",
+    "R10.3": "",
+    "R10.4.0": "",
+    "R10.4.1": "dna_r10.4.1_e8.2_400bps_sup@v4.2.0",
+}
+
+@click.command()
+@click.option('--root-dir', 
+              '-r', required=True, 
+              type=click.Path(exists=True), 
+              help='Root directory containing input files',
+              )
+@click.option('--pore', 
+              type=click.Choice(model_map.keys(), case_sensitive=False),
+              required=True, 
+              help='Pore type used for sequencing',
+              )
+
 
 def run_command(cmd, echo=True):
     """Run a shell command and handle errors."""
@@ -69,13 +86,8 @@ def run_command(cmd, echo=True):
         console.print(f"[red]Error output: {e.stderr}[/red]")
         raise click.Abort()
 
-def merge_outputs(output_dir):
-    """Merge basecalling outputs."""
-    console.print("[yellow]Merging outputs...[/yellow]")
-    # Add your output merging logic here
-    pass
 
-def run_dorado_duplex(input_dir, output_dir, pairs_file, model="dna_r10.4.1_e8.2_400bps_sup@v4.2.0"):
+def run_dorado_duplex(input_dir, output_dir, pairs_file, model):
     """Run Dorado duplex basecalling workflow."""
     console.print("[bold blue]Running Dorado duplex basecalling...[/bold blue]")
     
@@ -90,7 +102,7 @@ def run_dorado_duplex(input_dir, output_dir, pairs_file, model="dna_r10.4.1_e8.2
     
     run_command(cmd)
 
-def run_guppy_duplex(input_dir, output_dir, pairs_file, config="dna_r9.4.1_450bps_sup.cfg"):
+def run_guppy_duplex(input_dir, output_dir, pairs_file, model):
     """Run Guppy duplex basecalling workflow."""
     console.print("[bold blue]Running Guppy duplex basecalling...[/bold blue]")
     
@@ -99,52 +111,78 @@ def run_guppy_duplex(input_dir, output_dir, pairs_file, config="dna_r9.4.1_450bp
         "-i", input_dir,
         "-s", output_dir,
         "-x", "cuda:0",
-        "-c", config,
+        "-c", model,
         "--duplex_pairing_mode", "from_pair_list",
         "--duplex_pairing_file", pairs_file
     ]
     
     run_command(cmd)
 
-@click.command()
-@click.option('--root-dir', '-r', required=True, type=click.Path(exists=True), 
-              help='Root directory containing input files')
-@click.option('--pore-type', type=click.Choice(['r10.4', '9.4.1'], case_sensitive=False),
-              required=True, help='Pore type used for sequencing')
-def main(root_dir, pore_type):
+
+
+def do_duplex_basecall(root_dir, pore):
     """Duplex basecalling workflow for different pore types."""
     
     root_dir = Path(root_dir)
-    pore_type = PoreType(pore_type.lower())
+    if not pore:
+        pore = "R9.4.1"
+
+    model = model_map[pore]
     
     # Common paths
     pod5_dir = root_dir / "pod5"
     basecalled_dir = root_dir / "basecalled_duplex"
-    
+    distant_out = basecalled_dir / "distant"
+    pairs_filtered = basecalled_dir / "pair_ids_filtered.txt"
+
+    if pore == "R10.4.1":
+        # run dorado duplex pipeline
+        run_dorado_duplex(
+            input_dir=str(pod5_dir),
+            output_dir=str(distant_out),
+            pairs_file=str(pairs_filtered)
+        )
+
+    else:
+        # run legacy guppy duplex pipeline
+        #
+        # Iteration 1
+        # processing standalone duplex reads
+        console.print("\n[bold green]Starting Iteration 1: Distant pairs[/bold green]")
+        console.print("processing standalone distand reads...")
+
+        run_guppy_duplex(
+            input_dir=str(pod5_dir),
+            output_dir=str(distant_out),
+            pairs_file=str(pairs_filtered)
+        )
+
+        # Iteration 1
+        # splitting and processing concatenated duplex reads
+        console.print("\n[bold green]Starting Iteration 2: Split pairs[/bold green]")
+        console.print("splitting and processing concatenated reads...")
+
+        run_guppy_duplex(
+            input_dir=str(split_input),
+            output_dir=str(split_out),
+            pairs_file=str(split_pairs)
+        )
+
+    console.print("[bold green]Duplex reads were basecalled successfully![/bold green]")
+
     # Ensure directories exist
     os.makedirs(basecalled_dir, exist_ok=True)
     
     # Iteration 1: Distant pairs
     console.print("\n[bold green]Starting Iteration 1: Distant pairs[/bold green]")
     
-    distant_out = basecalled_dir / "distant"
-    pairs_filtered = basecalled_dir / "pair_ids_filtered.txt"
+
     
     if not pairs_filtered.exists():
         raise click.FileError(str(pairs_filtered), "Pairs file not found")
-    
-    if pore_type == PoreType.R10_4:
-        run_dorado_duplex(
-            input_dir=str(pod5_dir),
-            output_dir=str(distant_out),
-            pairs_file=str(pairs_filtered)
-        )
+
     else:  # R9.4.1
-        run_guppy_duplex(
-            input_dir=str(pod5_dir),
-            output_dir=str(distant_out),
-            pairs_file=str(pairs_filtered)
-        )
+        
     
     merge_outputs(distant_out)
     
@@ -174,6 +212,12 @@ def main(root_dir, pore_type):
     merge_outputs(split_out)
     
     console.print("[bold green]Basecalling workflow completed successfully![/bold green]")
+
+def merge_outputs(output_dir):
+    """Merge basecalling outputs."""
+    console.print("[yellow]Merging outputs...[/yellow]")
+    # Add your output merging logic here
+    pass
 
 if __name__ == "__main__":
     main()
