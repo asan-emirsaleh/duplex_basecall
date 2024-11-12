@@ -35,6 +35,8 @@ rule find_dupleces:
     output:
         out_dir = directory(os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}")),
         pair_ids = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}/split_duplex_pair_ids.txt")
+    conda:
+        "envs/duplex-tools-env.yaml"
     params:
         threads = 4
     shell:
