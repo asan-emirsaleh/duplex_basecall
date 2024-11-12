@@ -54,8 +54,10 @@ rule duplex_basecall:
         pod5s = os.path.join(OUTDIR, "{sample}/pod5/{pore}/{run}"),
         duplex_data = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}")
         pair_ids = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}/split_duplex_pair_ids.txt")
+        simplex_dir = os.path.join(OUTDIR, "{sample}/basecalled-simplex/{pore}/{run}")
     output:
-        directory(os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}"))
+        duplex_dir = directory(os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}"))
+        merged_dir = directory(os.path.join(OUTDIR, "{sample}/merged/{pore}/{run}"))
     params:
         threads = 4
     message:
@@ -63,4 +65,13 @@ rule duplex_basecall:
     log:
         os.path.join(LOGDIR, "dorado_basecall_{sample}_{pore}_{run}.log")
     shell:
-        "bash scripts/run_dorado_basecaller.sh -i {input} -o {output} --pore {wildcards.pore}"
+        """
+        bash scripts/do_duplex_basecall.py \
+            --pod5_dir {input.pod5s} \
+            --duplex_data {input.duplex_data} \
+            --simplex_dir {input.simplex_dir} \
+            -o {output.duplex_dir} \
+            --merged_dir {output.merged_dir} \
+            --pore {wildcards.pore} \
+            --threads {params.threads}
+        """

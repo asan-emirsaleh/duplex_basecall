@@ -50,6 +50,7 @@ import subprocess
 from rich.console import Console
 from pathlib import Path
 from enum import Enum
+import glob
 
 console = Console()
 
@@ -62,15 +63,40 @@ model_map = {
 }
 
 @click.command()
-@click.option('--root-dir', 
-              '-r', required=True, 
+@click.option('--pod5_dir', 
+              required=True, 
               type=click.Path(exists=True), 
-              help='Root directory containing input files',
+              help='Directory containing pod5 files',
+              )
+@click.option('--duplex_data', 
+              required=True, 
+              type=click.Path(exists=True), 
+              help='Directory containing duplex info',
+              )
+@click.option('--simplex_dir', 
+              required=True, 
+              type=click.Path(exists=True), 
+              help='Directory for basecalled simplex read files',
+              )
+@click.option('--duplex_dir', 
+              '-o', required=True, 
+              type=click.Path(exists=True), 
+              help='Root directory for output files',
+              )
+@click.option('--merged_dir', 
+              required=True, 
+              type=click.Path(exists=True), 
+              help='Directory for merged data outputting',
               )
 @click.option('--pore', 
               type=click.Choice(model_map.keys(), case_sensitive=False),
               required=True, 
               help='Pore type used for sequencing',
+              )
+@click.option('--threads', 
+              '-t', required=False, 
+              type=click.INT, 
+              help='CPU threads number',
               )
 
 
@@ -119,6 +145,25 @@ def run_guppy_duplex(input_dir, output_dir, pairs_file, model):
     run_command(cmd)
 
 
+def merge_outputs(source_dir, destination, destination_merged):
+    """Merge basecalling outputs."""
+    console.print("[yellow]Merging outputs...[/yellow]")
+    
+    source_files = source_dir.glob('*/*.fastq')
+
+    for source_file in source_files:
+        console.print(f"concatenating {source_files}...")
+        
+        with open(destination, "a") as outfile:
+            with open(source_file, "r") as infile:
+                outfile.write(infile.read())
+
+        with open(destination_merged, "a") as outfile:
+            with open(source_file, "r") as infile:
+                outfile.write(infile.read())
+
+    console.print("[green]Outputs has been merged.[/green]")
+
 
 def do_duplex_basecall(root_dir, pore):
     """Duplex basecalling workflow for different pore types."""
@@ -126,21 +171,28 @@ def do_duplex_basecall(root_dir, pore):
     root_dir = Path(root_dir)
     if not pore:
         pore = "R9.4.1"
+    else:
+        pore = pore.capitalize()
 
     model = model_map[pore]
     
     # Common paths
-    pod5_dir = root_dir / "pod5"
-    basecalled_dir = root_dir / "basecalled_duplex"
-    distant_out = basecalled_dir / "distant"
-    pairs_filtered = basecalled_dir / "pair_ids_filtered.txt"
+    distant_out = duplex_dir / "distant"
+    pairs_filtered = duplex_data / "pair_ids_filtered.txt"
 
     if pore == "R10.4.1":
         # run dorado duplex pipeline
         run_dorado_duplex(
             input_dir=str(pod5_dir),
             output_dir=str(distant_out),
-            pairs_file=str(pairs_filtered)
+            pairs_file=str(pairs_filtered),
+            model=str(model),
+        )
+
+        merge_outputs(
+            source_dir='',
+            destination='',
+            destination_merged=''
         )
 
     else:
@@ -151,21 +203,33 @@ def do_duplex_basecall(root_dir, pore):
         console.print("\n[bold green]Starting Iteration 1: Distant pairs[/bold green]")
         console.print("processing standalone distand reads...")
 
+        if not pairs_filtered.exists():
+            raise click.FileError(str(pairs_filtered), "Pairs file not found")
+
         run_guppy_duplex(
             input_dir=str(pod5_dir),
             output_dir=str(distant_out),
-            pairs_file=str(pairs_filtered)
+            pairs_file=str(pairs_filtered),
+            model=str(model),
         )
 
-        # Iteration 1
+        # Iteration 2
         # splitting and processing concatenated duplex reads
         console.print("\n[bold green]Starting Iteration 2: Split pairs[/bold green]")
         console.print("splitting and processing concatenated reads...")
 
+        split_input = duplex_dir / "pod5s_splitduplex"
+        split_out = duplex_dir / "split"
+        split_pairs = duplex_data / "split_duplex_pair_ids.txt"
+        
+        if not split_pairs.exists():
+            raise click.FileError(str(split_pairs), "Split pairs file not found")
+
         run_guppy_duplex(
             input_dir=str(split_input),
             output_dir=str(split_out),
-            pairs_file=str(split_pairs)
+            pairs_file=str(split_pairs),
+            model=str(model),
         )
 
     console.print("[bold green]Duplex reads were basecalled successfully![/bold green]")
@@ -176,48 +240,12 @@ def do_duplex_basecall(root_dir, pore):
     # Iteration 1: Distant pairs
     console.print("\n[bold green]Starting Iteration 1: Distant pairs[/bold green]")
     
-
-    
-    if not pairs_filtered.exists():
-        raise click.FileError(str(pairs_filtered), "Pairs file not found")
-
-    else:  # R9.4.1
-        
-    
-    merge_outputs(distant_out)
-    
-    # Iteration 2: Split pairs
-    console.print("\n[bold green]Starting Iteration 2: Split pairs[/bold green]")
-    
-    split_input = basecalled_dir / "pod5s_splitduplex"
-    split_out = basecalled_dir / "split"
-    split_pairs = basecalled_dir / "split_duplex_pair_ids.txt"
-    
-    if not split_pairs.exists():
-        raise click.FileError(str(split_pairs), "Split pairs file not found")
-    
-    if pore_type == PoreType.R10_4:
-        run_dorado_duplex(
-            input_dir=str(split_input),
-            output_dir=str(split_out),
-            pairs_file=str(split_pairs)
-        )
-    else:  # R9.4.1
-        run_guppy_duplex(
-            input_dir=str(split_input),
-            output_dir=str(split_out),
-            pairs_file=str(split_pairs)
-        )
-    
     merge_outputs(split_out)
     
     console.print("[bold green]Basecalling workflow completed successfully![/bold green]")
 
-def merge_outputs(output_dir):
-    """Merge basecalling outputs."""
-    console.print("[yellow]Merging outputs...[/yellow]")
-    # Add your output merging logic here
-    pass
+
+
 
 if __name__ == "__main__":
     main()
