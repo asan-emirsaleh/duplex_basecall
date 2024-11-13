@@ -1,5 +1,6 @@
 import os
 
+
 rule convert_2_pod5:
     input:
         "_data/{sample}/fast5/{pore}/{run}"
