@@ -53,21 +53,21 @@ rule find_dupleces:
 rule duplex_basecall:
     input:
         pod5s = os.path.join(OUTDIR, "{sample}/pod5/{pore}/{run}"),
-        duplex_data = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}")
-        pair_ids = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}/split_duplex_pair_ids.txt")
+        duplex_data = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}"),
+        pair_ids = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}/split_duplex_pair_ids.txt"),
         simplex_dir = os.path.join(OUTDIR, "{sample}/basecalled-simplex/{pore}/{run}")
     output:
-        duplex_dir = directory(os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}"))
+        duplex_dir = directory(os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}")),
         merged_dir = directory(os.path.join(OUTDIR, "{sample}/merged/{pore}/{run}"))
     params:
         threads = 4
     message:
         "Rule {rule} started processing {input.duplex_data}."
     log:
-        os.path.join(LOGDIR, "dorado_basecall_{sample}_{pore}_{run}.log")
+        os.path.join(LOGDIR, "duplex_basecall_{sample}_{pore}_{run}.log")
     shell:
         """
-        bash scripts/do_duplex_basecall.py \
+        python scripts/do_duplex_basecall.py \
             --pod5_dir {input.pod5s} \
             --duplex_data {input.duplex_data} \
             --simplex_dir {input.simplex_dir} \
@@ -75,4 +75,23 @@ rule duplex_basecall:
             --merged_dir {output.merged_dir} \
             --pore {wildcards.pore} \
             --threads {params.threads}
+        """
+
+
+rule merge_and_classify:
+    input:
+        simplex_dir = os.path.join(OUTDIR, "{sample}/basecalled-simplex/{pore}/{run}"),
+        duplex_dir = os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}")
+    output:
+        merged_dir = directory(os.path.join(OUTDIR, "{sample}/merged/{pore}/{run}"))
+    message:
+        "Rule {rule} started processing basecalled reads."
+    log:
+        os.path.join(LOGDIR, "duplex_basecall_{sample}_{pore}_{run}.log")
+    shell:
+        """
+        python scripts/merge_and_classify.py \
+            --simplex_dir {input.simplex_dir} \
+            --duplex_dir {input.duplex_dir} \
+            --merged_dir {output.merged_dir} \
         """

@@ -1,50 +1,8 @@
-## Pseudocode block
-#
-# if pore == r10.4...
-# do dorado duplex basecall workflow, check commands in github
-#
-# if pore == 9.4.1
-# do guppy_basecaller_duplex
-#
-# ITERATION 1
-#
-# IN="${R}/pod5/"
-# OUT="${R}/basecalled_duplex/distant"
-# PAIRS="${R}/basecalled_duplex/pair_ids_filtered.txt"
-#
-# guppy_basecaller_duplex \
-#    -i ${IN} \
-#    -s ${OUT} \
-#    -x 'cuda:0' \
-#    -c dna_r9.4.1_450bps_sup.cfg \
-#    --duplex_pairing_mode from_pair_list  \
-#    --duplex_pairing_file ${PAIRS}
-#
-# do output merge
-#
-# ITERATION 2
-# 
-# IN="${DIR}/basecalled_duplex/pod5s_splitduplex/"
-# OUT="${DIR}/basecalled_duplex/split"
-# PAIRS="${R}/basecalled_duplex/split_duplex_pair_ids.txt"
-#  
-#  guppy_basecaller_duplex \
-#    -i ${IN} \
-#    -s ${OUT} \
-#    -x 'cuda:0' \
-#    -c dna_r9.4.1_450bps_sup.cfg \
-#    --duplex_pairing_mode from_pair_list  \
-#    --duplex_pairing_file ${PAIRS}
-#
-# do output merge
-
 import os
 import click
 import subprocess
 from rich.console import Console
 from pathlib import Path
-from enum import Enum
-import glob
 
 console = Console()
 
@@ -150,7 +108,7 @@ def remove_previous(in_file):
     console.print(f"[yellow]Merged file {in_file} existed before was removed.[/yellow]")
 
 
-def merge_outputs(source_dir, destination, destination_merged):
+def merge_outputs(source_dir: Path, destination: Path, destination_merged: Path):
     """Merge basecalling outputs."""
     console.print("[yellow]Merging outputs...[/yellow]")
     
@@ -159,7 +117,7 @@ def merge_outputs(source_dir, destination, destination_merged):
     source_files = source_dir.glob('*/*.fastq')
 
     for source_file in source_files:
-        console.print(f"concatenating {source_files}...")
+        console.print(f"concatenating {source_file}...")
         
         with open(destination, "a") as outfile:
             with open(source_file, "r") as infile:
@@ -194,8 +152,8 @@ def do_duplex_basecall(pod5_dir, duplex_data, simplex_dir, duplex_dir, merged_di
     # Common paths
     distant_out = duplex_dir / "distant"
     pairs_filtered = duplex_data / "pair_ids_filtered.txt"
-    distant_merged = merged_dir / "distant_merged.fastq"
-    all_merged = merged_dir / "all_merged.fastq"
+    distant_merged = merged_dir / "duplex-distant_merged.fastq"
+    all_merged = merged_dir / "duplex-all_merged.fastq"
 
     remove_previous(all_merged)
 
@@ -252,7 +210,7 @@ def do_duplex_basecall(pod5_dir, duplex_data, simplex_dir, duplex_dir, merged_di
 
         split_out = duplex_dir / "split"
         split_pairs = duplex_data / "split_duplex_pair_ids.txt"
-        split_merged = merged_dir / "split_merged.fastq"
+        split_merged = merged_dir / "duplex-split_merged.fastq"
 
         if not split_pairs.exists():
             raise click.FileError(str(split_pairs), "Split pairs file not found")
@@ -266,7 +224,7 @@ def do_duplex_basecall(pod5_dir, duplex_data, simplex_dir, duplex_dir, merged_di
         )
 
         merge_outputs(
-            source_dir=distant_out,
+            source_dir=split_out,
             destination=split_merged,
             destination_merged=all_merged
         )
