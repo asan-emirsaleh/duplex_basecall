@@ -83,7 +83,8 @@ rule merge_and_classify:
         simplex_dir = os.path.join(OUTDIR, "{sample}/basecalled-simplex/{pore}/{run}"),
         duplex_dir = os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}")
     output:
-        merged_dir = directory(os.path.join(OUTDIR, "{sample}/merged/{pore}/{run}"))
+        merged_dir = directory(os.path.join(OUTDIR, "{sample}/merged/{pore}/{run}")),
+        total_merged_dir = directory(os.path.join(OUTDIR, "{sample}/total-merged"))
     message:
         "Rule {rule} started processing basecalled reads."
     log:
@@ -94,4 +95,5 @@ rule merge_and_classify:
             --simplex_dir {input.simplex_dir} \
             --duplex_dir {input.duplex_dir} \
             --merged_dir {output.merged_dir} \
+            --total {output.total_merged_dir}
         """

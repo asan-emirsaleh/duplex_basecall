@@ -28,6 +28,11 @@ console = Console()
               type=click.Path(exists=True), 
               help='Directory for merged data outputting',
               )
+@click.option('--total', 
+              required=True, 
+              type=click.Path(exists=True), 
+              help='Directory for merged data outputting',
+              )
 
 
 def run_command(cmd, echo=True):
@@ -53,7 +58,7 @@ def remove_previous(in_file):
     console.print(f"[yellow]Merged file {in_file} existed before was removed.[/yellow]")
 
 
-def merge_outputs(source_dir: Path, destination: Path, destination_merged: Path):
+def merge_outputs(source_dir: Path, destination: Path, destination_merged: Path, suffix: str):
     """Merge basecalling outputs."""
     console.print("[yellow]Merging outputs...[/yellow]")
     
@@ -74,6 +79,12 @@ def merge_outputs(source_dir: Path, destination: Path, destination_merged: Path)
 
     console.print("[green]Outputs has been merged.[/green]")
 
+
+def parse_id(fastq):
+    """Parse FASTQ id with awk."""
+
+    cmd = f'awk '
+    subprocess.call(cmd, shell=True)
 
 def do_duplex_basecall(pod5_dir, duplex_data, simplex_dir, duplex_dir, merged_dir, pore, threads):
     """Duplex basecalling workflow for different pore types."""
