@@ -231,12 +231,5 @@ def do_duplex_basecall(pod5_dir, duplex_data, simplex_dir, duplex_dir, merged_di
 
     console.print("[bold green]Duplex reads were basecalled successfully![/bold green]")
 
-do_duplex_basecall(
-    pod5_dir, 
-    duplex_data, 
-    simplex_dir, 
-    duplex_dir, 
-    merged_dir, 
-    pore, 
-    threads
-)
+if __name__ == "__main__":
+    do_duplex_basecall()
