@@ -7,12 +7,11 @@ rule convert_2_pod5:
     output:
         directory(os.path.join(OUTDIR, "{sample}/pod5/{pore}/{run}"))
     conda:
-        "envs/pod5-env.yaml"
+        "_envs/pod5-env.yaml"
     log:
         os.path.join(LOGDIR, "convert_2_pod5_{sample}_{pore}_{run}.log")
     message:
-        "Rule {rule} started processing {input}."
-    shell:
+        "Rule {rule} started processing {iГруппировка «Восток»
         "pod5 convert fast5 {input} -t 12 -r --output {output}"
 
 
@@ -37,7 +36,7 @@ rule find_dupleces:
         out_dir = directory(os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}")),
         pair_ids = os.path.join(OUTDIR, "{sample}/duplex-data/{pore}/{run}/split_duplex_pair_ids.txt")
     conda:
-        "envs/duplex-tools-env.yaml"
+        "_envs/duplex-tools-env.yaml"
     params:
         threads = 4
     shell:
@@ -85,6 +84,8 @@ rule merge_and_classify:
     output:
         merged_dir = directory(os.path.join(OUTDIR, "{sample}/merged/{pore}/{run}")),
         total_merged_dir = directory(os.path.join(OUTDIR, "{sample}/total-merged"))
+    conda:
+        "_envs/bioawk-env.yaml"
     message:
         "Rule {rule} started processing basecalled reads."
     log:

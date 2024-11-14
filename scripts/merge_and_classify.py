@@ -83,8 +83,42 @@ def merge_outputs(source_dir: Path, destination: Path, destination_merged: Path,
 def parse_id(fastq):
     """Parse FASTQ id with awk."""
 
-    cmd = f'awk '
+    awk_cmd = "bioawk -c fastx '{print $name}'"
+    cmd = f'{awk_cmd} {fastq} > {str(fastq).split(".fastq")}.id.txt'
     subprocess.call(cmd, shell=True)
+
+
+def distant_id(txt: Path):
+    """Split txt with left and right ids."""
+
+    awk_cmd1 = "awk '{print $1}'"
+    cmd1 = f'cat {txt} | {awk_cmd1} > {txt}/orig_left.id.txt'
+
+    awk_cmd2 = "awk '{print $2}'"
+    cmd2 = f'cat {txt} | {awk_cmd2} > {txt}/orig_right.id.txt'
+
+    subprocess.call(cmd1, shell=True)
+    subprocess.call(cmd2, shell=True)
+
+
+## TODO: decide about the output path.
+
+def split_id(txt: Path):
+    """Split txt with original, left and right ids."""
+
+    awk_cmd1 = "awk '{print $1}'"
+    cmd1 = f'cat {txt} | {awk_cmd1} > {txt}/split_orig.id.txt'
+
+    awk_cmd2 = "awk '{print $2}'"
+    cmd2 = f'cat {txt} | {awk_cmd2} > {txt}/split_left.id.txt'
+
+    awk_cmd3 = "awk '{print $3}'"
+    cmd3 = f'cat {txt} | {awk_cmd3} > {txt}/split_right.id.txt'
+
+    subprocess.call(cmd1, shell=True)
+    subprocess.call(cmd2, shell=True)
+    subprocess.call(cmd3, shell=True)
+
 
 def do_duplex_basecall(pod5_dir, duplex_data, simplex_dir, duplex_dir, merged_dir, pore, threads):
     """Duplex basecalling workflow for different pore types."""
