@@ -11,7 +11,7 @@ rule convert_2_pod5:
     log:
         os.path.join(LOGDIR, "convert_2_pod5_{sample}_{pore}_{run}.log")
     message:
-        "Rule {rule} started processing {iГруппировка «Восток»
+        "Rule {rule} started processing {input}"
         "pod5 convert fast5 {input} -t 12 -r --output {output}"
 
 
