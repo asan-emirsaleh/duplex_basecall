@@ -99,10 +99,6 @@ rule trim_single_reads:
     shell:
         """
         mkdir -p {output.out_dir}
-        for bam in {input}/*.bam; do
-            base=$(basename "$bam" .bam)
-            samtools fastq "$bam" > {output.out_dir}/${{base}}.fastq
-        done
         bash scripts/trim_adapters.sh \
             -i {output.out_dir} \
             -o {output.out_dir} \
