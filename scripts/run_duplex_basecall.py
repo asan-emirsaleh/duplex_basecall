@@ -71,10 +71,11 @@ def run_dorado_duplex(input_dir, output_dir, pairs_file, model, threads):
     
     cmd = [
         "dorado", "duplex",
-        "--pairs-file", pairs_file,
+        "--pairs", pairs_file,
         "--model", model,
         "--device", "cuda:0",
         "--threads", threads,
+        "--emit-fastq",
         input_dir,
         output_dir,
     ]
@@ -92,6 +93,12 @@ def run_guppy_duplex(input_dir, output_dir, pairs_file, model, threads):
         "-x", "cuda:0",
         "-c", model,
         "--threads", threads,
+        "--detect_adapter", "--detect_primer",
+        "--detect_mid_strand_adapter",
+        "--trim_strategy", "dna",
+        "--trim_adapters", "--trim_primers",
+        "--do_read_splitting",
+        "--disable_pings",
         "--duplex_pairing_mode", "from_pair_list",
         "--duplex_pairing_file", pairs_file
     ]

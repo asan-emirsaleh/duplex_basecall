@@ -70,7 +70,11 @@ mkdir -p "${models}"
 [[ -d ${models}/${model} ]] || $dorado download --model ${model} --models-directory ${models}
 
 # Run dorado basecalling
-# note that for R9 pore data, trimming is set off by default.
+# note that for R9 pore data, trimming is set off by default,
+# so `--trim` parameter should be always set to 'all'
+
+gpu_option="cuda:all"
+
 "${dorado}" basecaller \
     --models-directory "${models}" \
     --emit-moves \
