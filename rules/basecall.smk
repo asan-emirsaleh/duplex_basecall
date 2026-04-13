@@ -62,7 +62,8 @@ rule duplex_basecall:
         simplex_dir = os.path.join(OUTDIR, "{sample}/basecalled-simplex/{pore}/{run}")
     output:
         duplex_dir = directory(os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}")),
-        merged_dir = directory(os.path.join(OUTDIR, "{sample}/merged/{pore}/{run}"))
+        distant_fastq = directory(os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}/distant.fastq")),
+        split_fastq   = directory(os.path.join(OUTDIR, "{sample}/basecalled-duplex/{pore}/{run}/split.fastq"))
     params:
         threads = 4
     message:
@@ -76,7 +77,6 @@ rule duplex_basecall:
             --duplex_data {input.duplex_data} \
             --simplex_dir {input.simplex_dir} \
             -o {output.duplex_dir} \
-            --merged_dir {output.merged_dir} \
             --pore {wildcards.pore} \
             --threads {params.threads} 2> {log}
         """
